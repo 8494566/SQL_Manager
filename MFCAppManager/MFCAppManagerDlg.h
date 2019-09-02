@@ -113,4 +113,7 @@ public:
 	afx_msg void OnEnChangeEditpointUsernameSet();
 	afx_msg void OnEnChangeEditpointUserwordset();
 	afx_msg void OnBnClickedButtonUaarOk2();
+	afx_msg void OnBnClickedButton2Hy();
+	afx_msg void OnBnClickedButton2Zs();
+	afx_msg void OnBnClickedButton2Fs();
 };

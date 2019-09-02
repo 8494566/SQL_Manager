@@ -220,6 +220,7 @@
   <ItemGroup>
     <Image Include="C:\Users\WGL\Desktop\ooopic_1566267577.ico" />
     <Image Include="res\MFCAppManager.ico" />
+    <Image Include="res\ooopic_1566267577.ico" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
