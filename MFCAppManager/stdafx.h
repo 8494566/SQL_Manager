@@ -13,6 +13,8 @@
 
 #define _ATL_CSTRING_EXPLICIT_CONSTRUCTORS      // 某些 CString 构造函数将是显式的
 
+#define  _CRT_SECURE_NO_WARNINGS
+
 // 关闭 MFC 对某些常见但经常可放心忽略的警告消息的隐藏
 #define _AFX_ALL_WARNINGS
 
@@ -37,10 +39,6 @@
 
 
 
-
-
-
-
 #ifdef _UNICODE
 #if defined _M_IX86
 #pragma comment(linker,"/manifestdependency:\"type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='x86' publicKeyToken='6595b64144ccf1df' language='*'\"")
@@ -53,3 +51,6 @@
 
 #include <afxdb.h>
 #import "C:\Program Files\Common Files\system\ado\msado15.dll" no_namespace rename("EOF", "adoEOF")
+
+#include "SkinH.h"
+#pragma comment(lib, "SkinH.lib")

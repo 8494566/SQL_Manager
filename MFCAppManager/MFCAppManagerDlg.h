@@ -4,6 +4,8 @@
 
 #pragma once
 #include "stdafx.h"
+#include "afxwin.h"
+#include "afxcmn.h"
 
 // CMFCAppManagerDlg 对话框
 class CMFCAppManagerDlg : public CDialogEx
@@ -37,6 +39,7 @@ public:
 public:
 	_ConnectionPtr m_pConnection;//连接access数据库的链接对象  
 	_RecordsetPtr m_pRecordset;//结果集对象
+
 	_bstr_t m_sqlCmd;
 	int m_point;
 	int m_int_camp;
@@ -46,6 +49,7 @@ public:
 	int m_obj_id;
 	int m_goodsnum;
 	int m_new_objid;
+	int m_int_level;
 public:
 	CString m_name;
 	CString m_cstring_point;
@@ -60,8 +64,11 @@ public:
 	CString m_ip_pont;
 	CString m_world;
 	CString m_reolid;
+private:
+	bool m_is_start;
 public:
 	afx_msg void OnBnClickedButtonConnect();
+	afx_msg bool Inif();
 	afx_msg BOOL CMFCAppManagerDlg::ExcuteCmd(CString bstrSqlCmd);
 	afx_msg void OnEnChangeEditname();
 	afx_msg void OnBnClickedButtonYes();
@@ -116,4 +123,13 @@ public:
 	afx_msg void OnBnClickedButton2Hy();
 	afx_msg void OnBnClickedButton2Zs();
 	afx_msg void OnBnClickedButton2Fs();
+	afx_msg void OnEnChangeEditIdididi();
+	CString m_sole_id;
+	CString m_user_orcl;
+	afx_msg void OnEnChangeEditUser();
+	CString m_Catalog;
+	afx_msg void OnEnChangeEditCatalog();
+	CString m_Area;
+	afx_msg void OnEnChangeEditArea();
+	afx_msg void OnBnClickedButtonMssageGet();
 };

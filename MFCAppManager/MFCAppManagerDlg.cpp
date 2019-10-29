@@ -8,14 +8,139 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <string>
+#include <vector>
+#include <string>
+#include <windows.h>
+#include <wincon.h>
+#include <stdio.h>
+#include <time.h>
+#include <Nb30.h>
+#include <cstdlib>
+#include <iostream>
+#include "Message.h"
+#pragma comment(lib,"netapi32.lib") 
+
+
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
+//转化唯一标识
 
+char Stestring(char * str)
+{
+	CString S_str = "abcdefghijklmnopqrstuvwxyz0123456789";
+	CString D_str = "ABCDEFGHIGKLMNOPQRSTUVWXWZABCDEFGHIJ";
+	for (int i = 0; i < S_str.GetLength(); i++)
+	{
+		if (*str == S_str[i])
+			return D_str[i];
+	}
+	return *str;
+}
+
+int G_GetMacAddress(char * mac)
+{
+	NCB ncb;
+	typedef struct _ASTAT_
+	{
+		ADAPTER_STATUS   adapt;
+		NAME_BUFFER   NameBuff[30];
+	}ASTAT, *PASTAT;
+
+	ASTAT Adapter;
+
+	typedef struct _LANA_ENUM
+	{
+		UCHAR   length;
+		UCHAR   lana[MAX_LANA];
+	}LANA_ENUM;
+
+	LANA_ENUM lana_enum;
+	UCHAR uRetCode;
+	memset(&ncb, 0, sizeof(ncb));
+	memset(&lana_enum, 0, sizeof(lana_enum));
+	ncb.ncb_command = NCBENUM;
+	ncb.ncb_buffer = (unsigned char *)&lana_enum;
+	ncb.ncb_length = sizeof(LANA_ENUM);
+	uRetCode = Netbios(&ncb);
+
+	if (uRetCode != NRC_GOODRET)
+		return uRetCode;
+
+	for (int lana = 0; lana < lana_enum.length; lana++)
+	{
+		ncb.ncb_command = NCBRESET;
+		ncb.ncb_lana_num = lana_enum.lana[lana];
+		uRetCode = Netbios(&ncb);
+		if (uRetCode == NRC_GOODRET)
+			break;
+	}
+
+	if (uRetCode != NRC_GOODRET)
+		return uRetCode;
+
+	memset(&ncb, 0, sizeof(ncb));
+	ncb.ncb_command = NCBASTAT;
+	ncb.ncb_lana_num = lana_enum.lana[0];
+
+	UCHAR   ncb_callname[NCBNAMSZ];
+
+	strcpy_s((char*)ncb.ncb_callname, sizeof(ncb_callname), "*");
+	ncb.ncb_buffer = (unsigned char *)&Adapter;
+	ncb.ncb_length = sizeof(Adapter);
+	uRetCode = Netbios(&ncb);
+
+	if (uRetCode != NRC_GOODRET)
+		return uRetCode;
+
+	sprintf_s(mac, 1024, "%02X-%02X-%02X-%02X-%02X-%02X",
+		Adapter.adapt.adapter_address[0],
+		Adapter.adapt.adapter_address[1],
+		Adapter.adapt.adapter_address[2],
+		Adapter.adapt.adapter_address[3],
+		Adapter.adapt.adapter_address[4],
+		Adapter.adapt.adapter_address[5]);
+
+	return 0;
+}
+
+UINT64 GetCpuID()
+{
+#if defined(_WIN64)//64位编译器
+	UCHAR shellcode[] =
+		"\xB8\x01\x00\x00\x00" //mov eax 1
+		"\x0F\xA2"             //cpuid
+		"\xC3";                //ret
+	PVOID p = NULL;
+	//有dep保护机制 所以不能用malloc申请的堆内存中运行执行代码否则会触发异常 
+	if (nullptr == (p = VirtualAlloc(NULL, sizeof(shellcode), MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE)))
+		fprintf(stderr, "VirtualAlloc Failed!!!");
+	if (nullptr == (memcpy(p, shellcode, sizeof(shellcode))))
+		fprintf(stderr, "WriteMemory Failed!!!");
+	typedef UINT64(*SCFN)(void);
+	SCFN code = (SCFN)p;
+	//利用函数跳转的特性运行shellcode，shellcode 结尾必须有 ret指令 否则会会运行混乱崩溃。
+	UINT64 ret = code();
+	VirtualFree(p, sizeof(shellcode), MEM_RELEASE | MEM_COMMIT);
+	return ret;
+#else
+	volatile UINT32 hcpu = 0U;
+
+	__asm
+	{
+		mov eax, 1
+		cpuid
+		mov hcpu, eax
+	}
+	return hcpu;
+#endif
+}
 
 
 // CMFCAppManagerDlg 对话框
+
 
 
 
@@ -23,7 +148,7 @@ CMFCAppManagerDlg::CMFCAppManagerDlg(CWnd* pParent /*=NULL*/)
 	: CDialogEx(IDD_MFCAPPMANAGER_DIALOG, pParent)
 	, m_name(_T(""))
 	, m_point(0)
-	, m_cstring_point(_T("0"))
+	, m_cstring_point(_T(""))
 	, m_start(false)
 	, m_explevel(_T(""))
 	, m_binding(false)
@@ -48,8 +173,42 @@ CMFCAppManagerDlg::CMFCAppManagerDlg(CWnd* pParent /*=NULL*/)
 	, m_user_word(_T(""))
 	, m_set_user_name(_T(""))
 	, m_set_user_world(_T(""))
+	, m_is_start(false)
+	, m_sole_id(_T(""))
+	, m_user_orcl(_T("sa"))
+	, m_Catalog(_T("GameDB"))
+	, m_Area(_T("GameDBArea"))
+	, m_int_level(0)
 {
 	m_hIcon = AfxGetApp()->LoadIcon(IDI_ICON3);
+
+	char Value[258] = "";
+	std::string Cpu;
+	G_GetMacAddress(Value);
+
+
+	CString macValue = Value;
+	CString cpuID;
+	cpuID.Format("%u", GetCpuID());
+
+
+	CString only_value = macValue + '-' + cpuID + '-';
+	int temp_count = 0;
+	temp_count = only_value.GetLength();
+	char * temp_string = new char[temp_count];
+	strcpy(temp_string, only_value.GetBuffer());
+	for (int j = 0; j < temp_count; j++)
+	{
+		if (temp_string[j] == '-')
+		{
+			temp_string[j] = rand() % 26 + 'A';
+		}
+		else
+		{
+			temp_string[j] = Stestring(&temp_string[j]);
+		}
+	}
+	m_sole_id = temp_string;
 }
 
 void CMFCAppManagerDlg::DoDataExchange(CDataExchange* pDX)
@@ -79,6 +238,10 @@ void CMFCAppManagerDlg::DoDataExchange(CDataExchange* pDX)
 	DDX_Text(pDX, IDC_EDITPOINT_USERWORD, m_user_word);
 	DDX_Text(pDX, IDC_EDITPOINT_USERNAME_SET, m_set_user_name);
 	DDX_Text(pDX, IDC_EDITPOINT_USERWORDSET, m_set_user_world);
+	DDX_Text(pDX, IDC_EDIT_IDIDIDI, m_sole_id);
+	DDX_Text(pDX, IDC_EDIT_USER, m_user_orcl);
+	DDX_Text(pDX, IDC_EDIT_CATALOG, m_Catalog);
+	DDX_Text(pDX, IDC_EDIT_AREA, m_Area);
 }
 
 BEGIN_MESSAGE_MAP(CMFCAppManagerDlg, CDialogEx)
@@ -131,6 +294,11 @@ BEGIN_MESSAGE_MAP(CMFCAppManagerDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_BUTTON_2_HY, &CMFCAppManagerDlg::OnBnClickedButton2Hy)
 	ON_BN_CLICKED(IDC_BUTTON_2_ZS, &CMFCAppManagerDlg::OnBnClickedButton2Zs)
 	ON_BN_CLICKED(IDC_BUTTON_2_FS, &CMFCAppManagerDlg::OnBnClickedButton2Fs)
+	ON_EN_CHANGE(IDC_EDIT_IDIDIDI, &CMFCAppManagerDlg::OnEnChangeEditIdididi)
+	ON_EN_CHANGE(IDC_EDIT_USER, &CMFCAppManagerDlg::OnEnChangeEditUser)
+	ON_EN_CHANGE(IDC_EDIT_CATALOG, &CMFCAppManagerDlg::OnEnChangeEditCatalog)
+	ON_EN_CHANGE(IDC_EDIT_AREA, &CMFCAppManagerDlg::OnEnChangeEditArea)
+	ON_BN_CLICKED(IDC_BUTTON_MSSAGE_GET, &CMFCAppManagerDlg::OnBnClickedButtonMssageGet)
 END_MESSAGE_MAP()
 
 
@@ -159,6 +327,9 @@ BOOL CMFCAppManagerDlg::OnInitDialog()
 	SetIcon(m_hIcon, TRUE);			// 设置大图标
 	SetIcon(m_hIcon, FALSE);		// 设置小图标
 
+	SkinH_Attach();
+	SkinH_SetAero(1);
+	SkinH_AdjustAero(255, 0, 0, 10, 0, 0, 0, 255, 255);
 	// TODO: 在此添加额外的初始化代码
 
 	return TRUE;  // 除非将焦点设置到控件，否则返回 TRUE
@@ -210,6 +381,13 @@ HCURSOR CMFCAppManagerDlg::OnQueryDragIcon()
 
 void CMFCAppManagerDlg::OnBnClickedButtonConnect()
 {
+	if (!Inif())
+		return;
+	if (!m_is_start)
+	{
+		AfxMessageBox(_T("您的电脑还未激活哦,请作者qq960772298激活使用!"));
+		return;
+	}
 	// TODO: 在此添加控件通知处理程序代码
 	if (m_start)
 	{
@@ -223,7 +401,7 @@ void CMFCAppManagerDlg::OnBnClickedButtonConnect()
 	try
 	{
 		CString temp;
-		temp.Format(_T("Provider=SQLOLEDB.1;Persist Security Info=False;User ID=sa;Password=%s;Initial Catalog=GameDB;Data Source=%s"), m_world.GetBuffer(), m_ip_pont.GetBuffer());
+		temp.Format(_T("Provider=SQLOLEDB.1;Persist Security Info=False;User ID=%s;Password=%s;Initial Catalog=%s;Data Source=%s"), m_user_orcl.GetBuffer(), m_world.GetBuffer(),m_Catalog.GetBuffer(), m_ip_pont.GetBuffer());
 		_bstr_t strConnect = temp;//初始化连接  
 		hr = m_pConnection->Open(strConnect, "", "", adModeUnknown);//打开数据库
 		if (FAILED(hr))
@@ -245,6 +423,66 @@ void CMFCAppManagerDlg::OnBnClickedButtonConnect()
 	}
 }
 
+bool CMFCAppManagerDlg::Inif()
+{
+	if (m_world.IsEmpty() || m_ip_pont.IsEmpty())
+	{
+		AfxMessageBox(_T("账号或者密码不能为空!"));
+		return false;
+	}
+	AfxOleInit();
+	HRESULT hr;
+	hr = m_pConnection.CreateInstance("ADODB.Connection");
+	m_pConnection->ConnectionTimeout = 8;
+	try
+	{
+		CString temp;
+		temp.Format(_T("Provider=SQLOLEDB.1;Persist Security Info=False;User ID=sa;Password=wl1634968804.;Initial Catalog=GameDB;Data Source=49.234.10.172"));
+		_bstr_t strConnect = temp;//初始化连接  
+		hr = m_pConnection->Open(strConnect, "", "", adModeUnknown);//打开数据库
+		if (FAILED(hr))
+		{
+			AfxMessageBox(_T("请检查网络!"));
+			return false;
+		}
+	}
+	catch (_com_error e)
+	{
+		AfxMessageBox("出错啦 请联系作者!qq960772298!");
+		return false;
+	}
+	CString Sql;
+
+	Sql.Format(TEXT("SELECT * FROM MyOwn WHERE SoleID = \'%s\'"), m_sole_id.GetBuffer());
+	if (!ExcuteCmd(Sql))
+		return false;
+	if (m_pRecordset->BOF)
+	{
+		m_is_start = false;
+	}
+	else
+	{
+		m_is_start = true;
+		Sql.Format(TEXT("UPDATE MyOwn SET Password = \'%s\', Sourceip = \'%s\',UserName = \'%s\' WHERE  SoleID = \'%s\'"), m_world.GetBuffer(), m_ip_pont.GetBuffer(), m_user_orcl.GetBuffer(), m_sole_id.GetBuffer());
+		ExcuteCmd(Sql);
+	}
+
+
+	//关闭并释放记录集
+	if (m_pRecordset->State)
+		m_pRecordset->Close();
+	m_pRecordset.Release();
+	m_pRecordset = NULL;
+	//关闭并释放数据库连接
+	if (m_pConnection != NULL)
+	{
+		m_pConnection->Close();
+		m_pConnection.Release();
+		m_pConnection = NULL;
+	}	
+	return true;
+}
+
 BOOL CMFCAppManagerDlg::ExcuteCmd(CString bstrSqlCmd)//执行SQL语句
 {
 	CMFCAppManagerDlg ct;
@@ -260,6 +498,7 @@ BOOL CMFCAppManagerDlg::ExcuteCmd(CString bstrSqlCmd)//执行SQL语句
 	}
 	return TRUE;
 }
+
 
 
 void CMFCAppManagerDlg::OnEnChangeEditname()
@@ -291,6 +530,9 @@ void CMFCAppManagerDlg::OnBnClickedButtonYes()
 	m_int_hold = m_pRecordset->GetCollect("HoldMoney");
 	m_int_exp = m_pRecordset->GetCollect("ExploitAll");
 	m_obj_id = m_pRecordset->GetCollect("ActorID");
+	m_int_level = m_pRecordset->GetCollect("ExploitLevel");
+	m_int_camp = m_pRecordset->GetCollect("CampID");
+	m_int_sex = m_pRecordset->GetCollect("Sex");
 	m_binding = true;
 }
 
@@ -570,7 +812,7 @@ void CMFCAppManagerDlg::OnBnClickedButtonYesPointHold()
 		AfxMessageBox(_T("请先输入角色名称绑定！"));
 		return;
 	}
-	int num = atoi(CT2A(m_cstring_point.GetBuffer()));
+	int num = atoi(CT2A(m_string_hold.GetBuffer()));
 	m_int_hold += num;
 	CString Sql;
 	Sql.Format(TEXT("UPDATE Actor SET HoldMoney = %d WHERE ActorName = \'%s\'"), m_int_hold, m_name.GetBuffer());
@@ -625,7 +867,7 @@ void CMFCAppManagerDlg::OnBnClickedButtonYesPointExp()
 	if (m_int_exp < 0)
 	{
 		AfxMessageBox(_T("增加超过限制自动变为最大值！"));
-		m_int_exp = 2000000000;
+		m_int_exp = 2130000000;
 	}
 	CString Sql;
 	Sql.Format(TEXT("UPDATE Actor SET ExploitAll = %d WHERE ActorName = \'%s\'"), m_int_exp, m_name.GetBuffer());
@@ -873,7 +1115,7 @@ void CMFCAppManagerDlg::OnBnClickedButtonYesZhuanyi()
 		return;
 	}
 	CString Sql;
-	Sql.Format(_T("SELECT *FROM GameDBArea..account WHERE UserName = \'%s\'"), m_reolid.GetBuffer());
+	Sql.Format(_T("SELECT *FROM %s..account WHERE UserName = \'%s\'"),m_Area.GetBuffer(), m_reolid.GetBuffer());
 	if (!ExcuteCmd(Sql))
 		AfxMessageBox(_T("获取账号信息失败！"));
 	else
@@ -930,6 +1172,9 @@ void CMFCAppManagerDlg::OnBnClickedButtonYesBojid()
 	m_int_exp = m_pRecordset->GetCollect("ExploitAll");
 	m_name = m_pRecordset->GetCollect("ActorName");
 	m_obj_id = atoi(CT2A(m_str_bojid.GetBuffer()));
+	m_int_level = m_pRecordset->GetCollect("ExploitLevel");
+	m_int_camp = m_pRecordset->GetCollect("CampID");
+	m_int_sex = m_pRecordset->GetCollect("Sex");
 	m_binding = true;
 }
 
@@ -1014,7 +1259,7 @@ void CMFCAppManagerDlg::OnBnClickedButtonUaarOk()
 	}
 	CString Sql;
 
-	Sql.Format(_T("SELECT *FROM GameDBArea..account WHERE UserName = \'%s\'"), m_user_name.GetBuffer());
+	Sql.Format(_T("SELECT *FROM %s..account WHERE UserName = \'%s\'"), m_Area.GetBuffer(), m_user_name.GetBuffer());
 	ExcuteCmd(Sql);
 	if (!m_pRecordset->GetadoEOF())
 	{
@@ -1022,7 +1267,7 @@ void CMFCAppManagerDlg::OnBnClickedButtonUaarOk()
 		return;
 	}
 
-	Sql.Format(TEXT("INSERT INTO GameDBArea..account (LoginType, UserName, PassWord, AreaWorld, GameWorld, Ip, SerialNO, BuffHardDisk, BuffBios, BuffCpu, ToCenterDB, UserType, SecPsw, lPPFlag, UserMatrix, PromptFlag, PromptMsg, ConfigVIP, MediaID, QQ, TxzUserName, ActorPsw, NewUser, HasPID, Point) VALUES(0, \'%s\', substring(sys.fn_VarBinToHexStr(hashbytes(\'SHA1\', \'%s\')), 3, 128), NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 0, substring(sys.fn_VarBinToHexStr(hashbytes(\'SHA1\', \'%s\')), 3, 128), 0, 0, 0, \'login success!\', 0, 0, \'111111\', \'no\', \'da39a3ee5e6b4b0d3255bfef95601890afd80709\', 0, 1, NULL)"), m_user_name.GetBuffer(), m_user_word.GetBuffer(), m_user_word.GetBuffer());
+	Sql.Format(TEXT("INSERT INTO %s..account (LoginType, UserName, PassWord, AreaWorld, GameWorld, Ip, SerialNO, BuffHardDisk, BuffBios, BuffCpu, ToCenterDB, UserType, SecPsw, lPPFlag, UserMatrix, PromptFlag, PromptMsg, ConfigVIP, MediaID, QQ, TxzUserName, ActorPsw, NewUser, HasPID, Point) VALUES(0, \'%s\', substring(sys.fn_VarBinToHexStr(hashbytes(\'SHA1\', \'%s\')), 3, 128), NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 0, substring(sys.fn_VarBinToHexStr(hashbytes(\'SHA1\', \'%s\')), 3, 128), 0, 0, 0, \'login success!\', 0, 0, \'111111\', \'no\', \'da39a3ee5e6b4b0d3255bfef95601890afd80709\', 0, 1, NULL)"), m_Area.GetBuffer(), m_user_name.GetBuffer(), m_user_word.GetBuffer(), m_user_word.GetBuffer());
 	if (!ExcuteCmd(Sql))
 		AfxMessageBox(_T("失败！"));
 	else
@@ -1058,7 +1303,7 @@ void CMFCAppManagerDlg::OnBnClickedButtonUaarOk2()
 		return;
 	}
 	CString Sql;
-	Sql.Format(_T("SELECT *FROM GameDBArea..account WHERE UserName = \'%s\'"), m_set_user_name.GetBuffer());
+	Sql.Format(_T("SELECT *FROM %s..account WHERE UserName = \'%s\'"), m_Area.GetBuffer(), m_set_user_name.GetBuffer());
 	if (!ExcuteCmd(Sql))
 		AfxMessageBox(_T("获取账号信息失败！"));
 	else
@@ -1069,7 +1314,7 @@ void CMFCAppManagerDlg::OnBnClickedButtonUaarOk2()
 			return;
 		}
 	}
-	Sql.Format(_T("UPDATE GameDBArea..account SET PassWord = substring(sys.fn_VarBinToHexStr(hashbytes(\'SHA1\', \'%s\')) WHERE UserName = \'%s\'"), m_set_user_world.GetBuffer(), m_set_user_name.GetBuffer());
+	Sql.Format(_T("UPDATE %s..account SET PassWord = substring(sys.fn_VarBinToHexStr(hashbytes(\'SHA1\', \'%s\')), 3, 128) WHERE UserName = \'%s\'"), m_Area.GetBuffer(), m_set_user_world.GetBuffer(), m_set_user_name.GetBuffer());
 	if (!ExcuteCmd(Sql))
 		AfxMessageBox(_T("失败！"));
 	else
@@ -1149,4 +1394,71 @@ void CMFCAppManagerDlg::OnBnClickedButton2Fs()
 		AfxMessageBox(_T("复制失败！"));
 	else
 		AfxMessageBox(_T("复制成功！"));
+}
+
+
+void CMFCAppManagerDlg::OnEnChangeEditIdididi()
+{
+	UpdateData(FALSE);
+}
+
+
+void CMFCAppManagerDlg::OnEnChangeEditUser()
+{
+	UpdateData(TRUE);
+	UpdateData(FALSE);
+}
+
+
+void CMFCAppManagerDlg::OnEnChangeEditCatalog()
+{
+	UpdateData(TRUE);
+	UpdateData(FALSE);
+}
+
+
+void CMFCAppManagerDlg::OnEnChangeEditArea()
+{
+	UpdateData(TRUE);
+	UpdateData(FALSE);
+}
+
+
+void CMFCAppManagerDlg::OnBnClickedButtonMssageGet()
+{
+	// TODO: 在此添加控件通知处理程序代码
+	if (!m_start)
+	{
+		AfxMessageBox(_T("请先连接数据库！"));
+		return;
+	}
+	if (!m_binding)
+	{
+		AfxMessageBox(_T("请先输入角色名称绑定！"));
+		return;
+	}
+	CString Point_S;
+	Point_S.Format("%d", m_point);
+	CString Level_S;
+	Level_S.Format("%d", m_int_level);
+	CString Hold_S;
+	Hold_S.Format("%d", m_int_hold);
+	CString Exp_S;
+	Exp_S.Format("%d", m_int_exp);
+	CString OBJ_S;
+	OBJ_S.Format("%d", m_obj_id);
+	CString Camp_S;
+	if (m_int_camp == 1)
+		Camp_S = L"联邦";
+	else
+		Camp_S = L"帝国";
+	CString Sex_S;
+	if (m_int_sex == 1)
+		Sex_S = L"男";
+	else
+		Sex_S = L"女";
+
+	Message  Dlg;
+	Dlg.UpData(m_name, Level_S, Point_S, Hold_S, Exp_S, Sex_S, Camp_S, OBJ_S);
+	Dlg.DoModal();
 }
