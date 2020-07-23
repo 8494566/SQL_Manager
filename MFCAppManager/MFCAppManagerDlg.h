@@ -14,11 +14,7 @@ class CMFCAppManagerDlg : public CDialogEx
 public:
 	CMFCAppManagerDlg(CWnd* pParent = NULL);	// 标准构造函数
 
-// 对话框数据
-#ifdef AFX_DESIGN_TIME
 	enum { IDD = IDD_MFCAPPMANAGER_DIALOG };
-#endif
-
 protected:
 	virtual void DoDataExchange(CDataExchange* pDX);	// DDX/DDV 支持
 
@@ -102,21 +98,14 @@ public:
 	afx_msg void OnEnChangeEditpointZhuanyi();
 	afx_msg void OnBnClickedButtonYesZhuanyi();
 	afx_msg virtual BOOL PreTranslateMessage(MSG* pMsg);
-
 	afx_msg void OnEnChangeEditnameObjid();
-	CString m_str_bojid;
 	afx_msg void OnBnClickedButtonYesBojid();
-	CString m_clan_name;
 	afx_msg void OnBnClickedButtonClan();
 	afx_msg void OnEnChangeEditClanName();
 	afx_msg void OnBnClickedButtonClanDelete();
-	CString m_user_name;
-	CString m_user_word;
 	afx_msg void OnEnChangeEditpointUsername();
 	afx_msg void OnEnChangeEditpointUserword();
 	afx_msg void OnBnClickedButtonUaarOk();
-	CString m_set_user_name;
-	CString m_set_user_world;
 	afx_msg void OnEnChangeEditpointUsernameSet();
 	afx_msg void OnEnChangeEditpointUserwordset();
 	afx_msg void OnBnClickedButtonUaarOk2();
@@ -124,12 +113,23 @@ public:
 	afx_msg void OnBnClickedButton2Zs();
 	afx_msg void OnBnClickedButton2Fs();
 	afx_msg void OnEnChangeEditIdididi();
-	CString m_sole_id;
-	CString m_user_orcl;
 	afx_msg void OnEnChangeEditUser();
-	CString m_Catalog;
 	afx_msg void OnEnChangeEditCatalog();
-	CString m_Area;
 	afx_msg void OnEnChangeEditArea();
 	afx_msg void OnBnClickedButtonMssageGet();
+	afx_msg void OnBnClickedCheckJzmm();
+public:
+	CString m_sole_id;
+	CString m_user_orcl;
+	CString m_Catalog;
+	CString m_str_bojid;
+	CString m_Area;
+	CString m_set_user_name;
+	CString m_set_user_world;
+	CString m_user_name;
+	CString m_user_word;
+	CString m_clan_name;
+public:
+	void soleIdInit();
+	void RememberInit();
 };

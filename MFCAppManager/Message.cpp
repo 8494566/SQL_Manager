@@ -13,14 +13,14 @@ IMPLEMENT_DYNAMIC(Message, CDialogEx)
 
 Message::Message(CWnd* pParent /*=NULL*/)
 	: CDialogEx(IDD_DIALOG_MESSAGE, pParent)
-	, m_name(_T(""))
-	, m_level(_T(""))
-	, m_point(_T(""))
-	, m_money(_T(""))
-	, m_expall(_T(""))
-	, m_sex(_T(""))
-	, m_camp(_T(""))
-	, m_user_id(_T(""))
+	, m_name("")
+	, m_level("")
+	, m_point("")
+	, m_money("")
+	, m_expall("")
+	, m_sex("")
+	, m_camp("")
+	, m_user_id("")
 {
 
 }

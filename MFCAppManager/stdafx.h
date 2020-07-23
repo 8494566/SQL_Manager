@@ -13,7 +13,9 @@
 
 #define _ATL_CSTRING_EXPLICIT_CONSTRUCTORS      // 某些 CString 构造函数将是显式的
 
+#ifdef _M_IX86
 #define  _CRT_SECURE_NO_WARNINGS
+#endif 
 
 // 关闭 MFC 对某些常见但经常可放心忽略的警告消息的隐藏
 #define _AFX_ALL_WARNINGS
@@ -52,5 +54,8 @@
 #include <afxdb.h>
 #import "C:\Program Files\Common Files\system\ado\msado15.dll" no_namespace rename("EOF", "adoEOF")
 
+// 32位编译
+#ifdef _M_IX86
 #include "SkinH.h"
 #pragma comment(lib, "SkinH.lib")
+#endif 
