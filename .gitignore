@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# Build / packaging artifacts
+build/
+dist/
+*.spec
+
+# IDE / editor
+.vs/
+.idea/
+
+# MSVC build output (legacy)
+x64/
+*.vcxproj.user
