@@ -128,8 +128,11 @@ class App:
         self.d_backend = ft.Dropdown(
             label="数据库类型", width=140, value="mysql",
             options=[ft.dropdown.Option(k, v) for k, v in BACKENDS.items()],
+            on_change=self._on_backend_change,
         )
-        self.f_user = ft.TextField(label="用户名", value=config.DEFAULT_USER, width=160)
+        self.f_user = ft.TextField(
+            label="用户名", value=config.DEFAULT_USERS["mysql"], width=160
+        )
         self.f_pwd = ft.TextField(
             label="密码", password=True, can_reveal_password=True, width=160
         )
@@ -167,6 +170,15 @@ class App:
                 ),
             )
         )
+
+    def _on_backend_change(self, _=None) -> None:
+        # Swap the default username when the user hasn't customised it.
+        current = (self.f_user.value or "").strip()
+        if current in ("", *config.DEFAULT_USERS.values()):
+            self.f_user.value = config.DEFAULT_USERS.get(
+                self.d_backend.value, config.DEFAULT_USER
+            )
+            self.page.update()
 
     def _load_saved(self) -> None:
         data = credentials.load()

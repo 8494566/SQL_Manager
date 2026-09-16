@@ -13,6 +13,9 @@ DEFAULT_USER = "sa"
 DEFAULT_CATALOG = "GameDB"
 DEFAULT_AREA = "GameDBArea"
 
+# Per-backend default username (sa for SQL Server, root for MySQL).
+DEFAULT_USERS = {"sqlserver": "sa", "mysql": "root"}
+
 # Login timeout, seconds (legacy ADO used ConnectionTimeout = 8).
 CONNECT_TIMEOUT = 8
 
