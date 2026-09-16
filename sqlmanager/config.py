@@ -7,6 +7,7 @@ without hunting through the codebase.
 
 APP_TITLE = "英雄岛数据库管理工具"
 APP_VERSION = "1.0.0"
+APP_AUTHOR_QQ = "960772298"
 
 # Connection form defaults (from the legacy dialog).
 DEFAULT_USER = "sa"

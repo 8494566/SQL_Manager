@@ -22,7 +22,7 @@ class App:
         self.clip: dict | None = None
         self._locked: list[ft.Control] = []
 
-        page.title = f"{config.APP_TITLE} v{config.APP_VERSION}"
+        page.title = f"{config.APP_TITLE} v{config.APP_VERSION}  作者QQ:{config.APP_AUTHOR_QQ}"
         page.theme_mode = ft.ThemeMode.DARK
         page.theme = ft.Theme(color_scheme_seed=ft.colors.INDIGO)
         page.dark_theme = ft.Theme(color_scheme_seed=ft.colors.INDIGO)
@@ -108,6 +108,7 @@ class App:
         self.topbar = ft.Row(
             [
                 ft.Text(config.APP_TITLE, size=22, weight=ft.FontWeight.BOLD),
+                ft.Text(f"作者QQ:{config.APP_AUTHOR_QQ}", size=12, color=ft.colors.GREY),
                 ft.Container(expand=True),
                 self.theme_icon,
             ],
