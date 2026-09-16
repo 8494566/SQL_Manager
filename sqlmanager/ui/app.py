@@ -10,7 +10,7 @@ from __future__ import annotations
 import flet as ft
 
 from .. import config, credentials
-from ..db import Connection, DatabaseError
+from ..db import BACKENDS, Connection, DatabaseError
 from ..services import account, character, clan, inventory
 
 
@@ -125,6 +125,10 @@ class App:
 
     # -------------------------------------------------------- connection card
     def _build_connection(self) -> None:
+        self.d_backend = ft.Dropdown(
+            label="数据库类型", width=140, value="mysql",
+            options=[ft.dropdown.Option(k, v) for k, v in BACKENDS.items()],
+        )
         self.f_user = ft.TextField(label="用户名", value=config.DEFAULT_USER, width=160)
         self.f_pwd = ft.TextField(
             label="密码", password=True, can_reveal_password=True, width=160
@@ -146,7 +150,7 @@ class App:
                     [
                         ft.Text("数据库连接", weight=ft.FontWeight.BOLD),
                         ft.Row(
-                            [self.f_source, self.f_user, self.f_pwd, self.f_catalog, self.f_area],
+                            [self.d_backend, self.f_source, self.f_user, self.f_pwd, self.f_catalog, self.f_area],
                             wrap=True,
                         ),
                         ft.Row(
@@ -168,6 +172,7 @@ class App:
         data = credentials.load()
         if not data:
             return
+        self.d_backend.value = data.get("backend", "mysql")
         self.f_user.value = data.get("user", config.DEFAULT_USER)
         self.f_pwd.value = data.get("password", "")
         self.f_source.value = data.get("data_source", "")
@@ -183,6 +188,7 @@ class App:
             return
         ok = self.run(
             lambda: self.conn.connect(
+                backend=self.d_backend.value,
                 user=(self.f_user.value or "").strip(),
                 password=pwd,
                 catalog=(self.f_catalog.value or "").strip(),
@@ -195,6 +201,7 @@ class App:
         if self.remember.value:
             credentials.save(
                 {
+                    "backend": self.d_backend.value,
                     "user": self.f_user.value,
                     "password": pwd,
                     "data_source": source,

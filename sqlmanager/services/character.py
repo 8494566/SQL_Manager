@@ -8,7 +8,7 @@ stale-accumulation bug.
 from __future__ import annotations
 
 from .. import config
-from ..db import Connection, DatabaseError, validate_identifier
+from ..db import Connection, DatabaseError
 
 
 def bind_by_name(conn: Connection, name: str) -> dict:
@@ -114,12 +114,12 @@ def transfer(
     conn: Connection, *, area: str, actor_id: int, target_account: str
 ) -> None:
     """Move a character to another account by resolving the target account's
-    UserID from ``[<area>]..account`` and updating the Actor owner column.
+    UserID from the Area account table and updating the Actor owner column.
     """
-    area = validate_identifier(area, "Area 数据库名")
     owner_col = config.ACTOR_OWNER_COLUMN
+    table = conn.account_table(area)
     row = conn.query_one(
-        f"SELECT UserID FROM [{area}]..account WHERE UserName = ?",
+        f"SELECT UserID FROM {table} WHERE UserName = ?",
         (target_account,),
     )
     if row is None:
